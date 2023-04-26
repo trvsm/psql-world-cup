@@ -8,31 +8,44 @@ else
 fi
 
 # Do not change code above this line. Use the PSQL variable above to query your database.
-
-echo "$($PSQL "CREATE TABLE games(game_id serial primary key);")"
-
-echo "$($PSQL "ALTER TABLE games add year int")"
-
-echo "$($PSQL "ALTER TABLE games add round varchar(30)")"
-
-echo "$($PSQL "ALTER TABLE games add winner varchar(20)")"
-
-echo "$($PSQL "ALTER TABLE games add opponent varchar(20)")"
-
-echo "$($PSQL "Alter TAble games Add winner_goals int")"
-
-echo "$($PSQL "Alter Table games Add opponent_goals int")"
-
-echo "$($PSQL "\d games")"
-
+#echo $($PSQL "CREATE DATABASE worldcup")
+#echo $($PSQL "\c worldcup")
+echo $($PSQL "TRUNCATE TABLE games, teams")
+#Add each unique team to teams
+#what happens if I try to add teams when the column has unique constraint?
 cat games.csv | while IFS="," read YEAR ROUND WINNER OPPONENT WINNER_GOALS OPPONENT_GOALS
 do
-if [[ YEAR != 'year' ]]
-then
-#add db entry
-echo "$($PSQL "INSERT INTO games(year, round, winner, opponent, winner_goals, opponent_goals) VALUES($YEAR, '$ROUND', '$WINNER', '$OPPONENT', $WINNER_GOALS, $OPPONENT_GOALS)")"
+  if [[ $WINNER != winner ]]
+  then
+    #get team id
+    TEAM=$($PSQL "SELECT * FROM teams WHERE name='$WINNER'")
+    #if not found
+    if [[ -z $TEAM ]]
+    then
+     #insert team name
+      echo $($PSQL "INSERT INTO teams(name) VALUES('$WINNER')")  
+    fi
+  fi
+  #insert any missing opponent teams
+  if [[ $OPPONENT != opponent ]]
+  then
+  #get team id
+    OPP=$($PSQL "SELECT * FROM teams where name='$OPPONENT'")
+  #if not found
+    if [[ -z $OPP ]]
+    then
+  #insert team name
+      echo $($PSQL "INSERT INTO teams(name) VALUES('$OPPONENT')")
+    fi
+  fi
+  if [[ $YEAR != year ]]
+  then
+  #set winner id to var from teams
+    WIN_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
+  #set opponent id to var from teams
+    OPP_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
 
-fi
+  #insert into games
+    echo $($PSQL "INSERT INTO games(year, round, winner_id, opponent_id, winner_goals, opponent_goals) VALUES($YEAR, '$ROUND', $WIN_ID, $OPP_ID, $WINNER_GOALS, $OPPONENT_GOALS)")
+  fi
 done
-echo "$($PSQL "select * from games")"
-# echo "$($PSQL "")"
